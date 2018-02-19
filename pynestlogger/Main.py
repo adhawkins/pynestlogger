@@ -76,22 +76,8 @@ def main():
 						user = config.json['db-user'],
 						password = config.json['db-passwd'])
 
-	while True:
-		napi = nest.Nest(client_id=config.json["client-id"],
-												client_secret=config.json["client-secret"],
-												access_token_cache_file="pynestlogger-auth.json",
-													)
-		for structure in napi.structures:
-			print(str(structure))
-			print("Structure: " + structure.name + ", away: " + structure.away)
+	for structure in napi.structures:
+		for thermostat in structure.thermostats:
+			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state)
 
-			for thermostat in structure.thermostats:
-				print("  Thermostat: " + thermostat.name)
-				print("    Temp:   " + str(thermostat.temperature))
-				print("    Target: " + str(thermostat.target))
-				print("    HVAC:   " + thermostat.hvac_state)
-
-				db.record_measurement(structure, thermostat, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state)
-
-		time.sleep(5)
 
