@@ -1,20 +1,30 @@
 from argparse import ArgumentParser
-from Config import Config
 import nest
 from sys import version_info
+from pynestlogger.Config import Config
+from pynestlogger.PyNestLoggerDB import PyNestLoggerDB
+import time
 
 def main():
 	parser = ArgumentParser()
 	parser.add_argument("-r", "--reauth", help="force reauthorisation", action="store_true")
 	parser.add_argument("-k", "--client-id", help="Nest API key")
 	parser.add_argument("-s", "--client-secret", help="Nest API secret")
+	parser.add_argument("-d", "--db-host", help="Database host")
+	parser.add_argument("-n", "--db-db", help="Database name")
+	parser.add_argument("-u", "--db-user", help="Database user")
+	parser.add_argument("-p", "--db-passwd", help="Database password")
 	args = parser.parse_args()
 
 	config = Config()
 
 	if ("client-id" not in config.json and not args.client_id) or \
-		("client-secret" not in config.json and not args.client_secret):
-		print "API key and secret must be in either config or on command line"
+		("client-secret" not in config.json and not args.client_secret) or \
+		("db-host" not in config.json and not args.db_host) or \
+		("db-db" not in config.json and not args.db_db) or \
+		("db-user" not in config.json and not args.db_user) or \
+		("db-passwd" not in config.json and not args.db_passwd):
+		print("API key, secret, db host, db, user and password must be in either config or on command line")
 
 		parser.print_help()
 		exit(-1)
@@ -29,11 +39,26 @@ def main():
 		config.json["client-secret"] = args.client_secret
 		save_config = True
 
+	if args.db_host:
+		config.json["db-host"] = args.db_host
+		save_config = True
+
+	if args.db_host:
+		config.json["db-db"] = args.db_db
+		save_config = True
+
+	if args.db_host:
+		config.json["db-user"] = args.db_user
+		save_config = True
+
+	if args.db_host:
+		config.json["db-passwd"] = args.db_passwd
+		save_config = True
+
 	napi = nest.Nest(client_id=config.json["client-id"],
 											client_secret=config.json["client-secret"],
 											access_token_cache_file="pynestlogger-auth.json",
 												)
-
 	if args.reauth or napi.authorization_required:
 		print('Go to ' + napi.authorize_url + ' to authorize, then enter PIN below')
 		if version_info[0] < 3:
@@ -46,12 +71,27 @@ def main():
 	if save_config:
 		config.write()
 
-	for structure in napi.structures:
-		print ('Structure %s' % structure.name)
-		print ('    Away: %s' % structure.away)
-		print ('    Devices:')
+	db = PyNestLoggerDB(host = config.json['db-host'],
+						database = config.json['db-db'],
+						user = config.json['db-user'],
+						password = config.json['db-passwd'])
 
-		for device in structure.thermostats:
-			print ('        Device: %s' % device.name)
-			print ('            Temp: %0.1f' % device.temperature)
+	while True:
+		napi = nest.Nest(client_id=config.json["client-id"],
+												client_secret=config.json["client-secret"],
+												access_token_cache_file="pynestlogger-auth.json",
+													)
+		for structure in napi.structures:
+			print(str(structure))
+			print("Structure: " + structure.name + ", away: " + structure.away)
+
+			for thermostat in structure.thermostats:
+				print("  Thermostat: " + thermostat.name)
+				print("    Temp:   " + str(thermostat.temperature))
+				print("    Target: " + str(thermostat.target))
+				print("    HVAC:   " + thermostat.hvac_state)
+
+				db.record_measurement(structure, thermostat, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state)
+
+		time.sleep(5)
 
