@@ -43,15 +43,15 @@ def main():
 		config.json["db-host"] = args.db_host
 		save_config = True
 
-	if args.db_host:
+	if args.db_db:
 		config.json["db-db"] = args.db_db
 		save_config = True
 
-	if args.db_host:
+	if args.db_user:
 		config.json["db-user"] = args.db_user
 		save_config = True
 
-	if args.db_host:
+	if args.db_passwd:
 		config.json["db-passwd"] = args.db_passwd
 		save_config = True
 
