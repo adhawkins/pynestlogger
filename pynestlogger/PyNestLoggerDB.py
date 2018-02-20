@@ -103,6 +103,9 @@ class PyNestLoggerDB:
 													humidity=%s,
 													targettemp=%s,
 													hvacstate=%s""", [structure, thermostat, ambient, humidity, target, state])
+
+		cursor.execute("DELETE FROM `measurements` where `timestamp` < ADDDATE(NOW(), INTERVAL -10 DAY)")
+
 		self.conn.commit()
 
 
