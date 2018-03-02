@@ -14,9 +14,10 @@ def main():
 	parser.add_argument("-n", "--db-db", help="Database name")
 	parser.add_argument("-u", "--db-user", help="Database user")
 	parser.add_argument("-p", "--db-passwd", help="Database password")
+	parser.add_argument("-f", "--config-file", help="Config file name")
 	args = parser.parse_args()
 
-	config = Config()
+	config = Config(args.config_file)
 
 	if ("client-id" not in config.json and not args.client_id) or \
 		("client-secret" not in config.json and not args.client_secret) or \

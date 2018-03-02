@@ -7,7 +7,10 @@ class Config:
 	orig_json = {}
 	json = {}
 
-	def __init__(self):
+	def __init__(self, filename=None):
+		if filename:
+			self.__filename = filename
+
 		if os.path.isfile(self.__filename):
 			with open(self.__filename, "r") as f:
 				try:
