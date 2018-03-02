@@ -19,6 +19,9 @@ class PyNestLoggerDB:
 		if database_version is 0:
 			self.create_database()
 
+		if database_version is 1:
+			self.update_to_v2()
+
 	def table_exists(self, table):
 		cursor = self.conn.cursor()
 		cursor.execute("SHOW TABLES LIKE %s", [table,])
@@ -90,10 +93,21 @@ class PyNestLoggerDB:
 			  `targettemp` int(11) NOT NULL,
 			  `ambienttemp` int(11) NOT NULL,
 			  `humidity` int(11) NOT NULL,
-			  `hvacstate` varchar(20) NOT NULL
+			  `hvacstate` varchar(20) NOT NULL													#off, heating, cooling, heat-cool, eco
 			) ENGINE=InnoDB DEFAULT CHARSET=latin1;""")
 
 		cursor.execute("ALTER TABLE `measurements` ADD PRIMARY KEY (`timestamp`,`structure_id`,`thermostat_id`);")
+
+	def update_to_v2(self):
+		cursor = self.conn.cursor()
+
+		cursor.execute("""ALTER TABLE `measurements`
+			MODIFY COLUMN ambienttemp FLOAT,
+			MODIFY COLUMN humidity FLOAT,
+			MODIFY COLUMN targettemp FLOAT
+		""")
+
+		self.set_version(2)
 
 	def record_measurement(self, structure, thermostat, ambient, humidity, target, state):
 		cursor = self.conn.cursor()
