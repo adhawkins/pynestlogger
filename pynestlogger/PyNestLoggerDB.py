@@ -19,8 +19,11 @@ class PyNestLoggerDB:
 		if database_version is 0:
 			self.create_database()
 
-		if database_version is 1:
+		if database_version < 2:
 			self.update_to_v2()
+
+		if database_version < 3:
+			self.update_to_v3()
 
 	def table_exists(self, table):
 		cursor = self.conn.cursor()
@@ -109,14 +112,29 @@ class PyNestLoggerDB:
 
 		self.set_version(2)
 
-	def record_measurement(self, structure, thermostat, ambient, humidity, target, state):
+	def update_to_v3(self):
+		cursor = self.conn.cursor()
+
+		cursor.execute("""ALTER TABLE `measurements`
+			ADD COLUMN `away` varchar(10) DEFAULT 'home';
+		""")
+
+		cursor.execute("""ALTER TABLE `structures`
+			DROP COLUMN `away`;
+		""")
+
+		self.set_version(3)
+
+	def record_measurement(self, structure, thermostat, ambient, humidity, target, state, away):
 		cursor = self.conn.cursor()
 		cursor.execute("""INSERT INTO `measurements` SET structure_id=%s,
 													thermostat_id=%s,
 													ambienttemp=%s,
 													humidity=%s,
 													targettemp=%s,
-													hvacstate=%s""", [structure, thermostat, ambient, humidity, target, state])
+													hvacstate=%s,
+													away=%s""",
+													[structure, thermostat, ambient, humidity, target, state, away])
 
 		cursor.execute("DELETE FROM `measurements` where `timestamp` < ADDDATE(NOW(), INTERVAL -10 DAY)")
 

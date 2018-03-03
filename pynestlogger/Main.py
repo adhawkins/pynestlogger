@@ -79,6 +79,6 @@ def main():
 
 	for structure in napi.structures:
 		for thermostat in structure.thermostats:
-			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state)
+			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away)
 
 
