@@ -80,11 +80,23 @@
 							break;
 					}
 
+					switch ($row["away"])
+					{
+						case "away":
+							$homeaway=0;
+							break;
+
+						case "home":
+							$homeaway=1;
+							break;
+					}
+
 					$timestamp=round(strtotime($row["timestamp"])/60)*60*1000;
 					$series['targettemp']['data'][] = array($timestamp, $row["targettemp"]);
 					$series['ambienttemp']['data'][] = array($timestamp, $row["ambienttemp"]);
 					$series['humidity']['data'][] = array($timestamp, $row["humidity"]);
 					$series['hvacstate']['data'][] = array($timestamp, $hvacstate);
+					$series['homeaway']['data'][] = array($timestamp, $homeaway);
 
 					setSeries($results, $series);
 				}

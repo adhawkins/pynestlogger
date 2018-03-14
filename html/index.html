@@ -92,6 +92,22 @@
                             opposite: true
 
                         },
+                        {
+                            title:
+                            {
+                                text: 'Home / Away'
+                            },
+
+                            categories: [ 'Away', 'Home' ],
+
+                            labels:
+                            {
+                                formatter: function() { return this.value; }
+                            },
+
+                            opposite: true
+
+                        },
 /*
                         {
                             title:
@@ -129,6 +145,11 @@
                             name: "State",
                             yAxis: 1,
                             data: readData[0]["hvacstate"]["data"]
+                        },
+                        {
+                            name: "Home / Away",
+                            yAxis: 2,
+                            data: readData[0]["homeaway"]["data"]
                         },
 /*
                         {
