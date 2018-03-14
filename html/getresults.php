@@ -44,15 +44,16 @@
 
 	$results = array();
 
-	if (mysql_connect($DB_HOST,$DB_USER,$DB_PASSWORD))
+	$db = new mysqli($DB_HOST, $DB_USER, $DB_PASSWORD);
+	if (!$db->connect_error)
 	{
-		if (mysql_select_db($DB_DB))
+		if ($db->select_db($DB_DB))
 		{
-			$query="select * from measurements where (timestamp >= DATE_ADD(CURRENT_DATE(), INTERVAL " . mysql_escape_string($offset) . " day) AND timestamp <= DATE_ADD(CURRENT_DATE(), INTERVAL " . mysql_escape_string($offset+1) . " day)) order by timestamp";
+			$query="select * from measurements where (timestamp >= DATE_ADD(CURRENT_DATE(), INTERVAL " . $db->real_escape_string($offset) . " day) AND timestamp <= DATE_ADD(CURRENT_DATE(), INTERVAL " . $db->real_escape_string($offset+1) . " day)) order by timestamp";
 
-			if ($result = mysql_query($query))
+			if ($result = $db->query($query))
 			{
-				while ($row = mysql_fetch_assoc($result))
+				while ($row = $result->fetch_assoc())
 				{
 					$series = findResult($results, $row["structure_id"], $row["thermostat_id"]);
 
@@ -88,7 +89,19 @@
 					setSeries($results, $series);
 				}
 			}
+			else
+			{
+				die("Error querying: " . $db->error);
+			}
 		}
+		else
+		{
+			die("Error selecting db: " . $db->error);
+		}
+	}
+	else
+	{
+		die("Error connecting: " . $db->connect_error);
 	}
 
 	echo json_encode($results, JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
