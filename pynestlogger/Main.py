@@ -3,7 +3,10 @@ import nest
 from sys import version_info
 from pynestlogger.Config import Config
 from pynestlogger.PyNestLoggerDB import PyNestLoggerDB
+from pynestlogger.PyNestLoggerPostcodeLookup import PyNestLoggerPostcodeLookup
+from pynestlogger.PyNestLoggerConditionsLookup import PyNestLoggerConditionsLookup
 import time
+from pprint import pprint
 
 def main():
 	parser = ArgumentParser()
@@ -15,6 +18,10 @@ def main():
 	parser.add_argument("-u", "--db-user", help="Database user")
 	parser.add_argument("-p", "--db-passwd", help="Database password")
 	parser.add_argument("-f", "--config-file", help="Config file name")
+	parser.add_argument("-t", "--test-mode", help="Run in test mode", action="store_true")
+	parser.add_argument("-g", "--google-key", help="Google API key")
+	parser.add_argument("-w", "--wunderground-key", help="Weather Underground API key")
+
 	args = parser.parse_args()
 
 	config = Config(args.config_file)
@@ -56,6 +63,14 @@ def main():
 		config.json["db-passwd"] = args.db_passwd
 		save_config = True
 
+	if args.wunderground_key:
+		config.json["wunderground-key"] = args.wunderground_key
+		save_config = True
+
+	if args.google_key:
+		config.json["google-key"] = args.google_key
+		save_config = True
+
 	napi = nest.Nest(client_id=config.json["client-id"],
 											client_secret=config.json["client-secret"],
 											access_token_cache_file="pynestlogger-auth.json",
@@ -72,13 +87,30 @@ def main():
 	if save_config:
 		config.write()
 
-	db = PyNestLoggerDB(host = config.json['db-host'],
-						database = config.json['db-db'],
-						user = config.json['db-user'],
-						password = config.json['db-passwd'])
+	if args.test_mode:
+		for structure in napi.structures:
+			pprint(structure.name)
+			pprint(structure.country_code)
+			pprint(structure.postal_code)
 
-	for structure in napi.structures:
-		for thermostat in structure.thermostats:
-			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away)
+			postcode=PyNestLoggerPostcodeLookup(config.json['google-key'], structure.country_code, structure.postal_code)
+			print("Lat: " + str(postcode.latitude))
+			print("Long: " + str(postcode.longitude))
+
+			weather=PyNestLoggerConditionsLookup(config.json['wunderground-key'], postcode.latitude, postcode.longitude)
+
+			pprint(weather.time)
+			pprint(weather.temp)
+	else:
+		db = PyNestLoggerDB(host = config.json['db-host'],
+							database = config.json['db-db'],
+							user = config.json['db-user'],
+							password = config.json['db-passwd'])
+
+		for structure in napi.structures:
+			for thermostat in structure.thermostats:
+				db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away)
+
+
 
 
