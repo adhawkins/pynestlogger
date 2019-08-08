@@ -108,6 +108,18 @@
                             opposite: true
 
                         },
+                        {
+                            title:
+                            {
+                                text: 'Loft'
+                            },
+
+                            labels:
+                            {
+                                formatter: function() { return this.value; }
+                            },
+
+                        },
 /*
                         {
                             title:
@@ -150,6 +162,11 @@
                             name: "Home / Away",
                             yAxis: 2,
                             data: readData[0]["homeaway"]["data"]
+                        },
+                        {
+                            name: "Loft",
+                            yAxis: 0,
+                            data: readData[0]["loft"]["data"]
                         },
 /*
                         {

@@ -95,6 +95,7 @@
 					$series['targettemp']['data'][] = array($timestamp, $row["targettemp"]);
 					$series['ambienttemp']['data'][] = array($timestamp, $row["ambienttemp"]);
 					$series['humidity']['data'][] = array($timestamp, $row["humidity"]);
+					$series['loft']['data'][] = array($timestamp, $row["loft"]);
 					$series['hvacstate']['data'][] = array($timestamp, $hvacstate);
 					$series['homeaway']['data'][] = array($timestamp, $homeaway);
 
