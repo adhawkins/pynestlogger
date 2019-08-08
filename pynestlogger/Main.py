@@ -4,6 +4,7 @@ from sys import version_info
 from pynestlogger.Config import Config
 from pynestlogger.PyNestLoggerDB import PyNestLoggerDB
 import time
+import requests
 
 def main():
 	parser = ArgumentParser()
@@ -72,6 +73,8 @@ def main():
 	if save_config:
 		config.write()
 
+	loft = requests.get("http://nas.gently.org.uk:5000/").json()
+
 	db = PyNestLoggerDB(host = config.json['db-host'],
 						database = config.json['db-db'],
 						user = config.json['db-user'],
@@ -79,6 +82,6 @@ def main():
 
 	for structure in napi.structures:
 		for thermostat in structure.thermostats:
-			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away)
+			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away, loft)
 
 

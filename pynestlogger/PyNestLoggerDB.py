@@ -25,6 +25,9 @@ class PyNestLoggerDB:
 		if database_version < 3:
 			self.update_to_v3()
 
+		if database_version < 4:
+			self.update_to_v4()
+
 	def table_exists(self, table):
 		cursor = self.conn.cursor()
 		cursor.execute("SHOW TABLES LIKE %s", [table,])
@@ -125,7 +128,16 @@ class PyNestLoggerDB:
 
 		self.set_version(3)
 
-	def record_measurement(self, structure, thermostat, ambient, humidity, target, state, away):
+	def update_to_v4(self):
+		cursor = self.conn.cursor()
+
+		cursor.execute("""ALTER TABLE `measurements`
+			ADD COLUMN `loft` FLOAT DEFAULT 0.0;
+		""")
+
+		self.set_version(4)
+
+	def record_measurement(self, structure, thermostat, ambient, humidity, target, state, away, loft):
 		cursor = self.conn.cursor()
 		cursor.execute("""INSERT INTO `measurements` SET structure_id=%s,
 													thermostat_id=%s,
@@ -133,8 +145,9 @@ class PyNestLoggerDB:
 													humidity=%s,
 													targettemp=%s,
 													hvacstate=%s,
-													away=%s""",
-													[structure, thermostat, ambient, humidity, target, state, away])
+													away=%s,
+													loft=%s""",
+													[structure, thermostat, ambient, humidity, target, state, away, round(loft[0]['internal temperature']*2)/2])
 
 		cursor.execute("DELETE FROM `measurements` where `timestamp` < ADDDATE(NOW(), INTERVAL -10 DAY)")
 
