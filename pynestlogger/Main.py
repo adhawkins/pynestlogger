@@ -1,87 +1,99 @@
 from argparse import ArgumentParser
-import nest
 from sys import version_info
 from pynestlogger.Config import Config
 from pynestlogger.PyNestLoggerDB import PyNestLoggerDB
-import time
+from pynestlogger.NestThermostat import NestThermostat
+
 import requests
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
+
 
 def main():
-	parser = ArgumentParser()
-	parser.add_argument("-r", "--reauth", help="force reauthorisation", action="store_true")
-	parser.add_argument("-k", "--client-id", help="Nest API key")
-	parser.add_argument("-s", "--client-secret", help="Nest API secret")
-	parser.add_argument("-d", "--db-host", help="Database host")
-	parser.add_argument("-n", "--db-db", help="Database name")
-	parser.add_argument("-u", "--db-user", help="Database user")
-	parser.add_argument("-p", "--db-passwd", help="Database password")
-	parser.add_argument("-f", "--config-file", help="Config file name")
-	args = parser.parse_args()
+    parser = ArgumentParser()
+    parser.add_argument("-d", "--db-host", help="Database host")
+    parser.add_argument("-n", "--db-db", help="Database name")
+    parser.add_argument("-u", "--db-user", help="Database user")
+    parser.add_argument("-p", "--db-passwd", help="Database password")
+    parser.add_argument("-i", "--project-id", help="Project ID")
+    parser.add_argument("-f", "--config-file", help="Config file name")
+    parser.add_argument("-a", "--auth-file", help="File for storing auth information")
+    parser.add_argument(
+        "-s", "--secrets-file", help="File containing secrets information"
+    )
 
-	config = Config(args.config_file)
+    args = parser.parse_args()
 
-	if ("client-id" not in config.json and not args.client_id) or \
-		("client-secret" not in config.json and not args.client_secret) or \
-		("db-host" not in config.json and not args.db_host) or \
-		("db-db" not in config.json and not args.db_db) or \
-		("db-user" not in config.json and not args.db_user) or \
-		("db-passwd" not in config.json and not args.db_passwd):
-		print("API key, secret, db host, db, user and password must be in either config or on command line")
+    config = Config(args.config_file)
 
-		parser.print_help()
-		exit(-1)
+    if (
+        ("db-host" not in config.json and not args.db_host)
+        or ("db-db" not in config.json and not args.db_db)
+        or ("db-user" not in config.json and not args.db_user)
+        or ("db-passwd" not in config.json and not args.db_passwd)
+        or ("project-id" not in config.json and not args.project_id)
+        or ("auth-file" not in config.json and not args.auth_file)
+        or ("secrets-file" not in config.json and not args.secrets_file)
+    ):
+        print(
+            "db host, db name, db user, db password, project ID, auth file and secrets file must be in either config or on command line"
+        )
 
-	save_config = False
+        parser.print_help()
+        exit(-1)
 
-	if args.client_id:
-		config.json["client-id"] = args.client_id
-		save_config = True
+    save_config = False
 
-	if args.client_secret:
-		config.json["client-secret"] = args.client_secret
-		save_config = True
+    if args.db_host:
+        config.json["db-host"] = args.db_host
+        save_config = True
 
-	if args.db_host:
-		config.json["db-host"] = args.db_host
-		save_config = True
+    if args.db_db:
+        config.json["db-db"] = args.db_db
+        save_config = True
 
-	if args.db_db:
-		config.json["db-db"] = args.db_db
-		save_config = True
+    if args.db_user:
+        config.json["db-user"] = args.db_user
+        save_config = True
 
-	if args.db_user:
-		config.json["db-user"] = args.db_user
-		save_config = True
+    if args.db_passwd:
+        config.json["db-passwd"] = args.db_passwd
+        save_config = True
 
-	if args.db_passwd:
-		config.json["db-passwd"] = args.db_passwd
-		save_config = True
+    if args.project_id:
+        config.json["project-id"] = args.project_id
+        save_config = True
 
-	napi = nest.Nest(client_id=config.json["client-id"],
-											client_secret=config.json["client-secret"],
-											access_token_cache_file="pynestlogger-auth.json",
-												)
-	if args.reauth or napi.authorization_required:
-		print('Go to ' + napi.authorize_url + ' to authorize, then enter PIN below')
-		if version_info[0] < 3:
-			pin = raw_input("PIN: ")
-		else:
-			pin = input("PIN: ")
+    if args.auth_file:
+        config.json["auth-file"] = args.auth_file
+        save_config = True
 
-		napi.request_token(pin)
+    if args.secrets_file:
+        config.json["secrets-file"] = args.secrets_file
+        save_config = True
 
-	if save_config:
-		config.write()
+    if save_config:
+        config.write()
 
-	loft = requests.get("http://nas.gently.org.uk:5000/").json()
+    nest = NestThermostat(
+        config.json["auth-file"], config.json["secrets-file"], config.json["project-id"]
+    )
 
-	db = PyNestLoggerDB(host = config.json['db-host'],
-						database = config.json['db-db'],
-						user = config.json['db-user'],
-						password = config.json['db-passwd'])
+    measurement = nest.getMeasurement()
 
-	for structure in napi.structures:
-		for thermostat in structure.thermostats:
-			db.record_measurement(structure._serial, thermostat.device_id, thermostat.temperature, thermostat.humidity, thermostat.target, thermostat.hvac_state, structure.away, loft)
+    loft = requests.get("http://nas.gently.org.uk:5000/").json()
 
+    db = PyNestLoggerDB(
+        host=config.json["db-host"],
+        database=config.json["db-db"],
+        user=config.json["db-user"],
+        password=config.json["db-passwd"],
+    )
 
+    db.record_measurement(
+        ambient=measurement.ambient,
+        humidity=measurement.humidity,
+        target=measurement.target,
+        state=measurement.state,
+        loft=loft[0]["internal temperature"],
+    )
