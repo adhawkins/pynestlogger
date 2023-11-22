@@ -1,157 +1,206 @@
 import MySQLdb
 
+
 class PyNestLoggerDB:
-	def __init__(self, host, database, user, password):
-		self.conn = MySQLdb.connect(host = host,
-																db = database,
-																user = user,
-																passwd = password)
+    def __init__(self, host, database, user, password):
+        self.conn = MySQLdb.connect(host=host, db=database, user=user, passwd=password)
 
-		if self.conn:
-			self.check_database()
+        if self.conn:
+            self.check_database()
 
-	def check_database(self):
-		database_version = 0
+    def check_database(self):
+        database_version = 0
 
-		if self.table_exists('version'):
-			database_version = self.get_version()
+        if self.table_exists("version"):
+            database_version = self.get_version()
 
-		if database_version is 0:
-			self.create_database()
+        if database_version == 0:
+            self.create_database()
 
-		if database_version < 2:
-			self.update_to_v2()
+        if database_version < 2:
+            self.update_to_v2()
 
-		if database_version < 3:
-			self.update_to_v3()
+        if database_version < 3:
+            self.update_to_v3()
 
-		if database_version < 4:
-			self.update_to_v4()
+        if database_version < 4:
+            self.update_to_v4()
 
-	def table_exists(self, table):
-		cursor = self.conn.cursor()
-		cursor.execute("SHOW TABLES LIKE %s", [table,])
-		result = cursor.fetchone()
-		if result:
-			return True
-		else:
-			return False
+        if database_version < 5:
+            self.update_to_v5()
 
-	def get_version(self):
-		cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
-		cursor.execute("SELECT * FROM `version`")
-		row=cursor.fetchone()
-		return row['version']
+    def table_exists(self, table):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SHOW TABLES LIKE %s",
+            [
+                table,
+            ],
+        )
+        result = cursor.fetchone()
+        if result:
+            return True
+        else:
+            return False
 
-	def set_version(self, version):
-		cursor = self.conn.cursor()
+    def get_version(self):
+        cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute("SELECT * FROM `version`")
+        row = cursor.fetchone()
+        return row["version"]
 
-		cursor.execute("DELETE FROM `version`")
+    def set_version(self, version):
+        cursor = self.conn.cursor()
 
-		cursor.execute("INSERT INTO `version` VALUES (%s);", [version,])
+        cursor.execute("DELETE FROM `version`")
 
-		self.conn.commit()
+        cursor.execute(
+            "INSERT INTO `version` VALUES (%s);",
+            [
+                version,
+            ],
+        )
 
-	def create_database(self):
-		cursor = self.conn.cursor()
-		if self.table_exists("version"):
-			cursor.execute("DROP TABLE `version`;")
+        self.conn.commit()
 
-		cursor.execute("""CREATE TABLE `version` (
-				  `version` int(11) NOT NULL
-				) ENGINE=InnoDB DEFAULT CHARSET=latin1;""")
+    def create_database(self):
+        cursor = self.conn.cursor()
+        if self.table_exists("version"):
+            cursor.execute("DROP TABLE `version`;")
 
-		self.set_version(1)
+        cursor.execute(
+            """CREATE TABLE `version` (
+                  `version` int(11) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=latin1;"""
+        )
 
-		if self.table_exists("structures"):
-			cursor.execute("DROP TABLE `structures`;")
+        self.set_version(1)
 
-		cursor.execute("""CREATE TABLE `structures` (
-				  `id` varchar(100) NOT NULL,
-				  `name` varchar(100) DEFAULT NULL,
-				  `away` varchar(10) DEFAULT NULL,
-				  `country` varchar(10) DEFAULT NULL,
-				  `postcode` varchar(20) DEFAULT NULL,
-				  `timezone` varchar(100) NOT NULL
-				) ENGINE=InnoDB DEFAULT CHARSET=latin1;""")
+        if self.table_exists("structures"):
+            cursor.execute("DROP TABLE `structures`;")
 
-		cursor.execute("ALTER TABLE `structures` ADD UNIQUE KEY `id` (`id`);")
+        cursor.execute(
+            """CREATE TABLE `structures` (
+                  `id` varchar(100) NOT NULL,
+                  `name` varchar(100) DEFAULT NULL,
+                  `away` varchar(10) DEFAULT NULL,
+                  `country` varchar(10) DEFAULT NULL,
+                  `postcode` varchar(20) DEFAULT NULL,
+                  `timezone` varchar(100) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=latin1;"""
+        )
 
-		if self.table_exists("thermostats"):
-			cursor.execute("DROP TABLE `thermostats`;")
+        cursor.execute("ALTER TABLE `structures` ADD UNIQUE KEY `id` (`id`);")
 
-		cursor.execute("""CREATE TABLE `thermostats` (
-				  `id` varchar(100) NOT NULL,
-				  `name` varchar(100) DEFAULT NULL,
-				  `namelong` varchar(100) DEFAULT NULL,
-				  `tempscale` varchar(2) DEFAULT NULL
-				) ENGINE=InnoDB DEFAULT CHARSET=latin1;""")
+        if self.table_exists("thermostats"):
+            cursor.execute("DROP TABLE `thermostats`;")
 
-		cursor.execute("ALTER TABLE `thermostats` ADD UNIQUE KEY `id` (`id`);")
+        cursor.execute(
+            """CREATE TABLE `thermostats` (
+                  `id` varchar(100) NOT NULL,
+                  `name` varchar(100) DEFAULT NULL,
+                  `namelong` varchar(100) DEFAULT NULL,
+                  `tempscale` varchar(2) DEFAULT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=latin1;"""
+        )
 
-		if self.table_exists("measurements"):
-			cursor.execute("DROP TABLE `measurements`;")
+        cursor.execute("ALTER TABLE `thermostats` ADD UNIQUE KEY `id` (`id`);")
 
-		cursor.execute("""CREATE TABLE `measurements` (
-			  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			  `structure_id` varchar(100) NOT NULL,
-			  `thermostat_id` varchar(100) NOT NULL,
-			  `targettemp` int(11) NOT NULL,
-			  `ambienttemp` int(11) NOT NULL,
-			  `humidity` int(11) NOT NULL,
-			  `hvacstate` varchar(20) NOT NULL													#off, heating, cooling, heat-cool, eco
-			) ENGINE=InnoDB DEFAULT CHARSET=latin1;""")
+        if self.table_exists("measurements"):
+            cursor.execute("DROP TABLE `measurements`;")
 
-		cursor.execute("ALTER TABLE `measurements` ADD PRIMARY KEY (`timestamp`,`structure_id`,`thermostat_id`);")
+        cursor.execute(
+            """CREATE TABLE `measurements` (
+              `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `structure_id` varchar(100) NOT NULL,
+              `thermostat_id` varchar(100) NOT NULL,
+              `targettemp` int(11) NOT NULL,
+              `ambienttemp` int(11) NOT NULL,
+              `humidity` int(11) NOT NULL,
+              `hvacstate` varchar(20) NOT NULL													#off, heating, cooling, heat-cool, eco
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;"""
+        )
 
-	def update_to_v2(self):
-		cursor = self.conn.cursor()
+        cursor.execute(
+            "ALTER TABLE `measurements` ADD PRIMARY KEY (`timestamp`,`structure_id`,`thermostat_id`);"
+        )
 
-		cursor.execute("""ALTER TABLE `measurements`
-			MODIFY COLUMN ambienttemp FLOAT,
-			MODIFY COLUMN humidity FLOAT,
-			MODIFY COLUMN targettemp FLOAT
-		""")
+    def update_to_v2(self):
+        cursor = self.conn.cursor()
 
-		self.set_version(2)
+        cursor.execute(
+            """ALTER TABLE `measurements`
+            MODIFY COLUMN ambienttemp FLOAT,
+            MODIFY COLUMN humidity FLOAT,
+            MODIFY COLUMN targettemp FLOAT
+        """
+        )
 
-	def update_to_v3(self):
-		cursor = self.conn.cursor()
+        self.set_version(2)
 
-		cursor.execute("""ALTER TABLE `measurements`
-			ADD COLUMN `away` varchar(10) DEFAULT 'home';
-		""")
+    def update_to_v3(self):
+        cursor = self.conn.cursor()
 
-		cursor.execute("""ALTER TABLE `structures`
-			DROP COLUMN `away`;
-		""")
+        cursor.execute(
+            """ALTER TABLE `measurements`
+            ADD COLUMN `away` varchar(10) DEFAULT 'home';
+        """
+        )
 
-		self.set_version(3)
+        cursor.execute(
+            """ALTER TABLE `structures`
+            DROP COLUMN `away`;
+        """
+        )
 
-	def update_to_v4(self):
-		cursor = self.conn.cursor()
+        self.set_version(3)
 
-		cursor.execute("""ALTER TABLE `measurements`
-			ADD COLUMN `loft` FLOAT DEFAULT 0.0;
-		""")
+    def update_to_v4(self):
+        cursor = self.conn.cursor()
 
-		self.set_version(4)
+        cursor.execute(
+            """ALTER TABLE `measurements`
+            ADD COLUMN `loft` FLOAT DEFAULT 0.0;
+        """
+        )
 
-	def record_measurement(self, structure, thermostat, ambient, humidity, target, state, away, loft):
-		cursor = self.conn.cursor()
-		cursor.execute("""INSERT INTO `measurements` SET structure_id=%s,
-													thermostat_id=%s,
-													ambienttemp=%s,
-													humidity=%s,
-													targettemp=%s,
-													hvacstate=%s,
-													away=%s,
-													loft=%s""",
-													[structure, thermostat, ambient, humidity, target, state, away, round(loft[0]['internal temperature']*2)/2])
+        self.set_version(4)
 
-		cursor.execute("DELETE FROM `measurements` where `timestamp` < ADDDATE(NOW(), INTERVAL -10 DAY)")
+    def update_to_v5(self):
+        cursor = self.conn.cursor()
 
-		self.conn.commit()
+        cursor.execute(
+            """DROP TABLE `structures`;
+            DROP TABLE `thermostats`;
+            ALTER TABLE `measurements` DROP PRIMARY KEY;
+            ALTER TABLE `measurements` DROP COLUMN `structure_id`;
+            ALTER TABLE `measurements` DROP COLUMN `thermostat_id`;
+            ALTER TABLE `measurements` DROP COLUMN `away`;
+            ALTER TABLE `measurements` ADD PRIMARY KEY (`timestamp`);
+        """
+        )
 
+        self.set_version(5)
 
+    def record_measurement(self, ambient, humidity, target, state, loft):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """INSERT INTO `measurements` SET ambienttemp=%s,
+                                                    humidity=%s,
+                                                    targettemp=%s,
+                                                    hvacstate=%s,
+                                                    loft=%s""",
+            [
+                round(ambient * 2) / 2,
+                round(humidity * 2) / 2,
+                round(target * 2) / 2,
+                state,
+                round(loft[0]["internal temperature"] * 2) / 2,
+            ],
+        )
 
+        cursor.execute(
+            "DELETE FROM `measurements` where `timestamp` < ADDDATE(NOW(), INTERVAL -10 DAY)"
+        )
+
+        self.conn.commit()
