@@ -198,7 +198,7 @@ class PyNestLoggerDB:
                 PyNestLoggerDB.round_number(humidity),
                 PyNestLoggerDB.round_number(target),
                 state,
-                PyNestLoggerDB.round_number(loft[0]["internal temperature"]),
+                PyNestLoggerDB.round_number(loft),
             ],
         )
 
