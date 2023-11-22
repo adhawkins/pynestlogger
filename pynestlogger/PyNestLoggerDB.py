@@ -182,6 +182,9 @@ class PyNestLoggerDB:
 
         self.set_version(5)
 
+    def round_number(number):
+        return round(number * 2) / 2
+
     def record_measurement(self, ambient, humidity, target, state, loft):
         cursor = self.conn.cursor()
         cursor.execute(
@@ -191,11 +194,11 @@ class PyNestLoggerDB:
                                                     hvacstate=%s,
                                                     loft=%s""",
             [
-                round(ambient * 2) / 2,
-                round(humidity * 2) / 2,
-                round(target * 2) / 2,
+                PyNestLoggerDB.round_number(ambient),
+                PyNestLoggerDB.round_number(humidity),
+                PyNestLoggerDB.round_number(target),
                 state,
-                round(loft[0]["internal temperature"] * 2) / 2,
+                PyNestLoggerDB.round_number(loft[0]["internal temperature"]),
             ],
         )
 
